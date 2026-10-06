@@ -1,0 +1,2117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Family Chronicles — Interactive 3D Scrapbook & Folder Archive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-desk: radial-gradient(circle at 50% 25%, #3d251e 0%, #1a0f0c 60%, #090504 100%);
+            --accent-glow: rgba(245, 158, 11, 0.35);
+            --cover-bg: linear-gradient(135deg, #5c2216 0%, #38120a 55%, #220904 100%);
+            --cover-border: #eab308;
+            --cover-foil: #fef08a;
+            --page-bg: #fdfaf3;
+            --page-bg-alt: #f5ebd6;
+            --page-text: #291d18;
+            --page-muted: #786254;
+            --page-accent: #b45309;
+            --page-border: #e4d5b7;
+            --spine-color: #1f0a05;
+            --font-display: 'Cormorant Garamond', Georgia, serif;
+            --font-hand: 'Caveat', cursive;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        [data-theme="love"] {
+            --bg-desk: radial-gradient(circle at 50% 25%, #4a152b 0%, #1f0712 60%, #0a0206 100%);
+            --accent-glow: rgba(244, 63, 94, 0.35);
+            --cover-bg: linear-gradient(135deg, #7f1d45 0%, #4c0d28 55%, #2b0516 100%);
+            --cover-border: #f9a8d4;
+            --cover-foil: #fce7f3;
+            --page-bg: #fffafb;
+            --page-bg-alt: #fceef3;
+            --page-text: #33101e;
+            --page-muted: #8a5066;
+            --page-accent: #be123c;
+            --page-border: #f3cddb;
+            --spine-color: #290414;
+        }
+
+        [data-theme="marriage"] {
+            --bg-desk: radial-gradient(circle at 50% 25%, #453012 0%, #1f1506 60%, #0a0702 100%);
+            --accent-glow: rgba(234, 179, 8, 0.38);
+            --cover-bg: linear-gradient(135deg, #785016 0%, #4a300b 55%, #2b1b05 100%);
+            --cover-border: #fde047;
+            --cover-foil: #fef9c3;
+            --page-bg: #fffdf7;
+            --page-bg-alt: #f8f0dc;
+            --page-text: #2c200e;
+            --page-muted: #7c6743;
+            --page-accent: #b45309;
+            --page-border: #ead8b1;
+            --spine-color: #261603;
+        }
+
+        [data-theme="nivisha"] {
+            --bg-desk: radial-gradient(circle at 50% 25%, #16324a 0%, #0b1926 60%, #04090e 100%);
+            --accent-glow: rgba(56, 189, 248, 0.35);
+            --cover-bg: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 55%, #0f172a 100%);
+            --cover-border: #93c5fd;
+            --cover-foil: #e0f2fe;
+            --page-bg: #f8fcff;
+            --page-bg-alt: #e8f3fc;
+            --page-text: #0f2537;
+            --page-muted: #52718a;
+            --page-accent: #0284c7;
+            --page-border: #cbe0f2;
+            --spine-color: #0b192c;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-sans);
+            background: var(--bg-desk);
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            transition: background 0.7s ease;
+            user-select: none;
+        }
+
+        .font-serif-book { font-family: var(--font-display); }
+        .font-hand { font-family: var(--font-hand); }
+
+        /* Ambient Particle Canvas */
+        #ambient-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Luxury Wood/Velvet Desk Texture */
+        .desk-vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 50% 48%, transparent 45%, rgba(0, 0, 0, 0.68) 100%),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 18px);
+            z-index: 1;
+        }
+
+        /* Main Stage */
+        .stage-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 68px 16px 86px 16px;
+            perspective: 2400px;
+        }
+
+        /* =========================================================================
+         * ROCK-SOLID 2-PAGE SPREAD BOOK ENGINE (ZERO Z-INDEX BUGS)
+         * ========================================================================= */
+        .book-viewport {
+            position: relative;
+            width: min(92vw, 900px);
+            height: min(72vh, 570px);
+            transform-style: preserve-3d;
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            display: flex;
+            box-shadow:
+                0 30px 60px -12px rgba(0, 0, 0, 0.78),
+                0 0 55px -10px var(--accent-glow);
+            border-radius: 18px;
+        }
+
+        /* Outer Hardcover Rim */
+        .book-hardcover-base {
+            position: absolute;
+            inset: -8px;
+            background: var(--cover-bg);
+            border: 2px solid var(--cover-border);
+            border-radius: 22px;
+            z-index: 0;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.75);
+            pointer-events: none;
+        }
+
+        /* Realistic Stacked Paper Thickness Edges */
+        .paper-stack-left,
+        .paper-stack-right {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            width: 10px;
+            background: repeating-linear-gradient(90deg, #efe6d5 0px, #d5c7ad 2px, #fcf9f2 4px);
+            z-index: 2;
+            pointer-events: none;
+        }
+        .paper-stack-left {
+            left: -4px;
+            border-radius: 6px 0 0 6px;
+            box-shadow: -3px 0 8px rgba(0,0,0,0.35);
+        }
+        .paper-stack-right {
+            right: -4px;
+            border-radius: 0 6px 6px 0;
+            box-shadow: 3px 0 8px rgba(0,0,0,0.35);
+        }
+
+        /* Central Spine Crease & Silk Ribbon */
+        .book-center-gutter {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 44px;
+            z-index: 35;
+            pointer-events: none;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(0,0,0,0.12) 32%,
+                rgba(0,0,0,0.34) 50%,
+                rgba(0,0,0,0.12) 68%,
+                transparent 100%);
+        }
+
+        .silk-bookmark {
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 14px;
+            height: calc(100% + 22px);
+            background: linear-gradient(90deg, #881337, #e11d48, #881337);
+            z-index: 36;
+            pointer-events: none;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.45);
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 97%, 0 100%);
+        }
+
+        /* Static Left & Right Visible Pages */
+        .spread-half {
+            position: relative;
+            width: 50%;
+            height: 100%;
+            z-index: 10;
+            overflow: hidden;
+            background-color: var(--page-bg);
+            background-image:
+                radial-gradient(rgba(140, 110, 80, 0.065) 1px, transparent 0),
+                linear-gradient(180deg, var(--page-bg) 0%, var(--page-bg-alt) 100%);
+            background-size: 16px 16px, 100% 100%;
+            color: var(--page-text);
+            transition: background 0.4s ease;
+        }
+
+        .spread-left {
+            border-radius: 14px 0 0 14px;
+            border-right: 1px solid rgba(0,0,0,0.12);
+            box-shadow: inset -28px 0 36px -18px rgba(0, 0, 0, 0.22);
+        }
+
+        .spread-right {
+            border-radius: 0 14px 14px 0;
+            border-left: 1px solid rgba(255,255,255,0.4);
+            box-shadow: inset 28px 0 36px -18px rgba(0, 0, 0, 0.22);
+        }
+
+        /* 3D Animated Turning Leaf (Only active during page turn animation!) */
+        .turning-leaf {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 50%;
+            height: 100%;
+            z-index: 30;
+            transform-style: preserve-3d;
+            pointer-events: none;
+            display: none;
+        }
+
+        .turning-leaf.animating-next {
+            display: block;
+            left: 50%;
+            transform-origin: left center;
+            animation: flipNextKeyframes 0.68s cubic-bezier(0.55, 0.06, 0.28, 0.98) forwards;
+        }
+
+        .turning-leaf.animating-prev {
+            display: block;
+            left: 0%;
+            transform-origin: right center;
+            animation: flipPrevKeyframes 0.68s cubic-bezier(0.55, 0.06, 0.28, 0.98) forwards;
+        }
+
+        @keyframes flipNextKeyframes {
+            0%   { transform: rotateY(0deg); box-shadow: -5px 0 20px rgba(0,0,0,0.2); }
+            50%  { transform: rotateY(-90deg) translateZ(10px); box-shadow: -25px 0 45px rgba(0,0,0,0.45); }
+            100% { transform: rotateY(-180deg); box-shadow: -5px 0 15px rgba(0,0,0,0.15); }
+        }
+
+        @keyframes flipPrevKeyframes {
+            0%   { transform: rotateY(0deg); box-shadow: 5px 0 20px rgba(0,0,0,0.2); }
+            50%  { transform: rotateY(90deg) translateZ(10px); box-shadow: 25px 0 45px rgba(0,0,0,0.45); }
+            100% { transform: rotateY(180deg); box-shadow: 5px 0 15px rgba(0,0,0,0.15); }
+        }
+
+        .leaf-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            overflow: hidden;
+            background-color: var(--page-bg);
+            background-image:
+                radial-gradient(rgba(140, 110, 80, 0.065) 1px, transparent 0),
+                linear-gradient(180deg, var(--page-bg) 0%, var(--page-bg-alt) 100%);
+            background-size: 16px 16px, 100% 100%;
+            color: var(--page-text);
+        }
+
+        .leaf-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Physical Right-Edge Folder Index Tabs */
+        .folder-tabs-rail {
+            position: absolute;
+            right: -38px;
+            top: 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 45;
+        }
+
+        .physical-tab {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            padding: 10px 7px;
+            border-radius: 0 10px 10px 0;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 4px 4px 12px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-left: none;
+            transition: all 0.22s ease;
+        }
+
+        .physical-tab:hover {
+            transform: translateX(4px);
+            filter: brightness(1.15);
+        }
+
+        .physical-tab.active-tab {
+            transform: translateX(7px);
+            outline: 2px solid #fde047;
+        }
+
+        /* Tactile Page Corner Curl Buttons */
+        .corner-curl-btn {
+            position: absolute;
+            bottom: 0;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: flex-end;
+            padding: 8px;
+            cursor: pointer;
+            z-index: 25;
+            transition: all 0.25s ease;
+        }
+
+        .corner-curl-right {
+            right: 0;
+            justify-content: flex-end;
+            background: linear-gradient(135deg, transparent 48%, rgba(0,0,0,0.1) 50%, var(--page-border) 56%, #d4c3a3 100%);
+            border-top-left-radius: 12px;
+        }
+
+        .corner-curl-left {
+            left: 0;
+            justify-content: flex-start;
+            background: linear-gradient(225deg, transparent 48%, rgba(0,0,0,0.1) 50%, var(--page-border) 56%, #d4c3a3 100%);
+            border-top-right-radius: 12px;
+        }
+
+        .corner-curl-btn:hover {
+            width: 64px;
+            height: 64px;
+            filter: brightness(1.06);
+        }
+
+        /* Scrapbook Polaroid Frame */
+        .polaroid-card {
+            background: #ffffff;
+            padding: 9px 9px 22px 9px;
+            border-radius: 6px;
+            box-shadow:
+                0 12px 26px -6px rgba(0, 0, 0, 0.26),
+                0 2px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+        }
+
+        .polaroid-card:hover {
+            transform: scale(1.02) translateY(-3px) rotate(0deg) !important;
+            box-shadow: 0 18px 34px -6px rgba(0, 0, 0, 0.34);
+        }
+
+        /* Washi Tape */
+        .washi-tape {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-2deg);
+            width: 78px;
+            height: 20px;
+            background: rgba(251, 232, 188, 0.78);
+            border-left: 2px dashed rgba(0,0,0,0.12);
+            border-right: 2px dashed rgba(0,0,0,0.12);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        /* Photo Color Grade Filters */
+        .grade-normal { filter: none; }
+        .grade-warm   { filter: sepia(0.28) saturate(1.35) contrast(1.05) brightness(1.03); }
+        .grade-vintage{ filter: sepia(0.55) contrast(0.95) brightness(0.98) saturate(0.85); }
+        .grade-bw     { filter: grayscale(0.95) contrast(1.15); }
+        .grade-dreamy { filter: saturate(1.25) brightness(1.08) contrast(0.96); }
+
+        /* Draggable/Clickable Page Sticker Badge */
+        .page-sticker {
+            position: absolute;
+            font-size: 1.55rem;
+            cursor: pointer;
+            user-select: none;
+            z-index: 22;
+            filter: drop-shadow(0 3px 5px rgba(0,0,0,0.25));
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: popSticker 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .page-sticker:hover {
+            transform: scale(1.3) rotate(8deg);
+        }
+
+        @keyframes popSticker {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Editable Text Highlight */
+        [contenteditable="true"]:hover {
+            background: rgba(180, 83, 9, 0.08);
+            border-radius: 4px;
+            outline: 1px dashed rgba(180, 83, 9, 0.4);
+        }
+        [contenteditable="true"]:focus {
+            background: rgba(255, 255, 255, 0.85);
+            color: #1c1917;
+            border-radius: 4px;
+            outline: 2px solid var(--page-accent);
+            padding: 0 4px;
+        }
+
+        /* Floating Heart Particle */
+        @keyframes floatHeartUp {
+            0% { transform: translateY(0) scale(0.8); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1.4); opacity: 0; }
+        }
+        .floating-heart {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            animation: floatHeartUp 0.85s ease-out forwards;
+        }
+
+        @media (max-width: 768px) {
+            .book-viewport {
+                width: 95vw;
+                height: 68vh;
+            }
+            .folder-tabs-rail {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="desk-vignette"></div>
+    <canvas id="ambient-canvas"></canvas>
+
+    <!-- Hidden File Input for Instant Photo Replacement on Any Page -->
+    <input id="quick-photo-input" type="file" accept="image/*" class="hidden" onchange="handleQuickPhotoFile(event)">
+
+    <header class="fixed top-0 left-0 right-0 z-40 px-3 py-2.5 md:px-6 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <!-- Brand & Active Folder Pill -->
+        <div onclick="openFolderShelfModal()" class="cursor-pointer flex items-center gap-2.5 bg-slate-950/80 hover:bg-slate-900/90 backdrop-blur-xl border border-white/15 px-3.5 py-2 rounded-2xl pointer-events-auto shadow-2xl transition group">
+            <div id="top-badge-icon-wrap" class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 group-hover:scale-105 transition">
+                <i id="top-badge-icon" class="fa-solid fa-folder-open"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 id="top-folder-title" class="text-xs md:text-sm font-bold text-white">All 3 Family Folders</h1>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 font-semibold">Click to Switch</span>
+                </div>
+                <p id="top-folder-sub" class="text-[10px] text-slate-300">Love Story • Marriage • Nivisha Baby</p>
+            </div>
+        </div>
+
+        <!-- 3 Separate Interactive Folder Buttons + All View -->
+        <div class="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-xl border border-white/15 p-1.5 rounded-2xl pointer-events-auto shadow-2xl overflow-x-auto max-w-full">
+            <button onclick="selectFolder('all')" id="folder-pill-all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-amber-400 text-slate-950 shadow">
+                <i class="fa-solid fa-layer-group text-[11px]"></i>
+                <span>All Chapters</span>
+            </button>
+            <button onclick="selectFolder('love')" id="folder-pill-love" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 text-rose-200 hover:bg-rose-500/25 bg-white/5">
+                <i class="fa-solid fa-heart text-rose-400 text-[11px]"></i>
+                <span>1. Love Story</span>
+            </button>
+            <button onclick="selectFolder('marriage')" id="folder-pill-marriage" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 text-amber-200 hover:bg-amber-500/25 bg-white/5">
+                <i class="fa-solid fa-ring text-amber-400 text-[11px]"></i>
+                <span>2. Marriage</span>
+            </button>
+            <button onclick="selectFolder('nivisha')" id="folder-pill-nivisha" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 text-sky-200 hover:bg-sky-500/25 bg-white/5">
+                <i class="fa-solid fa-baby text-sky-400 text-[11px]"></i>
+                <span>3. Nivisha Baby</span>
+            </button>
+        </div>
+
+        <!-- Studio Action Controls -->
+        <div class="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-xl border border-white/15 p-1.5 rounded-2xl pointer-events-auto shadow-2xl">
+            <button onclick="openFolderShelfModal()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-semibold text-white flex items-center gap-1.5 transition" title="Explore the 3 Folders Case">
+                <i class="fa-solid fa-folder-tree text-amber-400"></i>
+                <span class="hidden lg:inline">3 Folders Hub</span>
+            </button>
+
+            <button onclick="openTimelineDrawer()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-semibold text-amber-200 flex items-center gap-1.5 transition" title="Open Interactive Journey Timeline">
+                <i class="fa-solid fa-timeline text-amber-400"></i>
+                <span class="hidden sm:inline">Timeline</span>
+            </button>
+
+            <button onclick="toggleStickerDrawer()" id="sticker-drawer-btn" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-semibold text-pink-200 flex items-center gap-1.5 transition" title="Stamp Cute Stickers onto the Open Pages">
+                <i class="fa-solid fa-wand-magic-sparkles text-pink-400"></i>
+                <span class="hidden md:inline">Stickers</span>
+            </button>
+
+            <button onclick="toggleMusicBox()" id="music-btn" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 flex items-center justify-center text-slate-200 transition" title="Play Gentle Music Box Lullaby">
+                <i class="fa-solid fa-music text-xs"></i>
+            </button>
+
+            <button onclick="openAddModal()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-xs font-bold text-slate-950 shadow-lg flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-plus"></i>
+                <span class="hidden sm:inline">Add Photo</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Floating Scrapbook Sticker Bar (Appears when Stickers is toggled) -->
+    <div id="sticker-palette" class="fixed top-16 right-4 z-40 bg-slate-950/90 backdrop-blur-2xl border border-pink-400/40 px-4 py-2.5 rounded-2xl shadow-2xl hidden items-center gap-2.5">
+        <span class="text-[11px] font-bold text-pink-300 uppercase tracking-wider mr-1"><i class="fa-solid fa-stamp mr-1"></i>Stamp Sticker:</span>
+        <button onclick="stampStickerOnCurrentSpread('❤️')" class="text-lg hover:scale-125 transition" title="Add Heart">❤️</button>
+        <button onclick="stampStickerOnCurrentSpread('✨')" class="text-lg hover:scale-125 transition" title="Add Sparkles">✨</button>
+        <button onclick="stampStickerOnCurrentSpread('💍')" class="text-lg hover:scale-125 transition" title="Add Wedding Ring">💍</button>
+        <button onclick="stampStickerOnCurrentSpread('🌼')" class="text-lg hover:scale-125 transition" title="Add Marigold">🌼</button>
+        <button onclick="stampStickerOnCurrentSpread('🍼')" class="text-lg hover:scale-125 transition" title="Add Baby Bottle">🍼</button>
+        <button onclick="stampStickerOnCurrentSpread('👑')" class="text-lg hover:scale-125 transition" title="Add Crown">👑</button>
+        <button onclick="stampStickerOnCurrentSpread('🎂')" class="text-lg hover:scale-125 transition" title="Add Birthday Cake">🎂</button>
+        <button onclick="stampStickerOnCurrentSpread('🦋')" class="text-lg hover:scale-125 transition" title="Add Butterfly">🦋</button>
+        <button onclick="toggleStickerDrawer()" class="ml-1 w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-slate-300 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <main id="stage-wrapper" class="stage-wrapper">
+        <div id="book-viewport" class="book-viewport">
+            <!-- Leather Hardcover Rim -->
+            <div class="book-hardcover-base"></div>
+            <!-- Paper Stack Edges -->
+            <div class="paper-stack-left"></div>
+            <div class="paper-stack-right"></div>
+            <!-- Center Spine Shadow & Silk Ribbon -->
+            <div class="book-center-gutter"></div>
+            <div class="silk-bookmark"></div>
+
+            <!-- Physical Folder Index Tabs on Right Edge -->
+            <div class="folder-tabs-rail">
+                <button onclick="selectFolder('all')" id="rail-tab-all" class="physical-tab bg-stone-800 text-amber-200 active-tab">All</button>
+                <button onclick="selectFolder('love')" id="rail-tab-love" class="physical-tab bg-rose-700 text-rose-100">♥ Love</button>
+                <button onclick="selectFolder('marriage')" id="rail-tab-marriage" class="physical-tab bg-amber-700 text-amber-100">💍 Marriage</button>
+                <button onclick="selectFolder('nivisha')" id="rail-tab-nivisha" class="physical-tab bg-sky-700 text-sky-100">★ Nivisha</button>
+            </div>
+
+            <!-- Left Static Page -->
+            <div id="spread-left-page" class="spread-half spread-left"></div>
+
+            <!-- Right Static Page -->
+            <div id="spread-right-page" class="spread-half spread-right"></div>
+
+            <!-- 3D Turning Leaf Overlay (Only visible during page turn animation) -->
+            <div id="turning-leaf" class="turning-leaf">
+                <div id="leaf-front" class="leaf-face leaf-front"></div>
+                <div id="leaf-back" class="leaf-face leaf-back"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-slate-950/88 backdrop-blur-2xl border border-white/15 px-4 py-2.5 rounded-2xl shadow-2xl flex flex-col gap-2">
+        <!-- Interactive Milestone Timeline Scrubber Pills -->
+        <div class="flex items-center justify-between gap-2">
+            <button onclick="openFolderShelfModal()" class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-amber-300 shrink-0 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-folder-open"></i>
+                <span id="scrubber-folder-label">All Folders</span>
+            </button>
+
+            <div id="scrubber-pills-bar" class="flex items-center gap-1.5 overflow-x-auto py-0.5 flex-1 justify-start md:justify-center"></div>
+
+            <button onclick="openTimelineDrawer()" class="text-[10px] font-semibold text-slate-300 hover:text-amber-300 shrink-0 flex items-center gap-1 transition">
+                <span>Journey Map</span>
+                <i class="fa-solid fa-up-right-from-square text-[9px]"></i>
+            </button>
+        </div>
+
+        <!-- Spread Navigation Controls -->
+        <div class="flex items-center justify-between gap-2 border-t border-white/10 pt-1.5">
+            <div class="flex items-center gap-1.5">
+                <button onclick="goToSpread(0)" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white flex items-center justify-center transition" title="First Spread">
+                    <i class="fa-solid fa-angles-left text-xs"></i>
+                </button>
+                <button id="btn-prev-spread" onclick="prevSpread()" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-30 disabled:pointer-events-none">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span>Prev Spread</span>
+                </button>
+            </div>
+
+            <div class="text-center px-2">
+                <div id="bottom-spread-title" class="text-xs font-bold text-amber-300 truncate max-w-[220px] sm:max-w-md">Spread 1</div>
+                <div class="text-[10px] text-slate-400 hidden sm:block">Tip: Click any text on the page to edit it • Click photo to zoom</div>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+                <button id="btn-next-spread" onclick="nextSpread()" class="px-3.5 py-1.5 rounded-xl bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/40 text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-30 disabled:pointer-events-none">
+                    <span>Next Spread</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
+                <button id="btn-autoplay" onclick="toggleAutoPlay()" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white flex items-center justify-center transition" title="Auto-Flip Story Slideshow">
+                    <i id="autoplay-icon" class="fa-solid fa-play text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <div id="folder-shelf-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl hidden items-center justify-center p-4 md:p-8" onclick="closeFolderShelfModal(event)">
+        <div class="bg-slate-900 border border-white/15 rounded-3xl max-w-5xl w-full p-6 md:p-8 shadow-2xl overflow-y-auto max-h-[92vh]" onclick="event.stopPropagation()">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div>
+                    <span class="text-[11px] uppercase tracking-widest text-amber-400 font-bold"><i class="fa-solid fa-box-archive mr-1.5"></i>Interactive Family Folder Vault</span>
+                    <h2 class="text-2xl md:text-3xl font-serif-book font-bold text-white">Choose a Folder Chapter to Open & Explore</h2>
+                </div>
+                <button onclick="closeFolderShelfModal()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- 3 Interactive Folder Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                <!-- Folder 1: Love Story -->
+                <div onclick="selectFolder('love'); closeFolderShelfModal();" class="group cursor-pointer rounded-3xl bg-gradient-to-br from-rose-950/90 via-slate-900 to-slate-950 border-2 border-rose-400/30 hover:border-rose-400 p-5 transition-all hover:-translate-y-1.5 shadow-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-400/30">Folder 01 • 6 Pages</span>
+                            <div class="w-9 h-9 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition">
+                                <i class="fa-solid fa-heart"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-serif-book text-2xl font-bold text-white mb-1">Our Love Story</h3>
+                        <p class="text-xs text-rose-200/80 mb-4 leading-relaxed">2021 – 2023 • From our rainy café first coffee and coastal drives to paper lanterns and the sunset hilltop proposal.</p>
+                        <div class="grid grid-cols-3 gap-1.5 mb-4 rounded-2xl overflow-hidden border border-white/10">
+                            <img src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                            <img src="https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                            <img src="https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs font-bold text-rose-300">
+                        <span>Open Love Story Folder</span>
+                        <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+                    </div>
+                </div>
+
+                <!-- Folder 2: Marriage -->
+                <div onclick="selectFolder('marriage'); closeFolderShelfModal();" class="group cursor-pointer rounded-3xl bg-gradient-to-br from-amber-950/90 via-slate-900 to-slate-950 border-2 border-amber-400/30 hover:border-amber-400 p-5 transition-all hover:-translate-y-1.5 shadow-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/30">Folder 02 • 6 Pages</span>
+                            <div class="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition">
+                                <i class="fa-solid fa-ring"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-serif-book text-2xl font-bold text-white mb-1">Sacred Marriage</h3>
+                        <p class="text-xs text-amber-200/80 mb-4 leading-relaxed">2024 • Golden Haldi marigold showers, sacred Muhurtham vows, starlight reception dance, and misty tea hills honeymoon.</p>
+                        <div class="grid grid-cols-3 gap-1.5 mb-4 rounded-2xl overflow-hidden border border-white/10">
+                            <img src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                            <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                            <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs font-bold text-amber-300">
+                        <span>Open Marriage Folder</span>
+                        <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+                    </div>
+                </div>
+
+                <!-- Folder 3: Nivisha Baby -->
+                <div onclick="selectFolder('nivisha'); closeFolderShelfModal();" class="group cursor-pointer rounded-3xl bg-gradient-to-br from-sky-950/90 via-slate-900 to-slate-950 border-2 border-sky-400/30 hover:border-sky-400 p-5 transition-all hover:-translate-y-1.5 shadow-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-400/30">Folder 03 • 6 Pages</span>
+                            <div class="w-9 h-9 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 transition">
+                                <i class="fa-solid fa-baby"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-serif-book text-2xl font-bold text-white mb-1">Nivisha Baby</h3>
+                        <p class="text-xs text-sky-200/80 mb-4 leading-relaxed">2025 – 2026 • Welcome home Princess Nivisha, traditional flower cradle naming, morning giggles, and 1st birthday cake!</p>
+                        <div class="grid grid-cols-3 gap-1.5 mb-4 rounded-2xl overflow-hidden border border-white/10">
+                            <img src="https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                            <img src="https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                            <img src="https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=300&q=70" class="h-16 w-full object-cover group-hover:scale-105 transition" alt="">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs font-bold text-sky-300">
+                        <span>Open Nivisha Baby Folder</span>
+                        <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
+                <p class="text-xs text-slate-300">
+                    <i class="fa-solid fa-sparkles text-amber-400 mr-1.5"></i>Every page is live-interactive: click any title or story text to edit it, change photo color filters, or upload your own pictures!
+                </p>
+                <button onclick="selectFolder('all'); closeFolderShelfModal();" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-xs font-bold text-slate-950 transition shadow">
+                    Open Complete Combined Book (All 18 Pages)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="timeline-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl hidden items-center justify-center p-4 md:p-8" onclick="closeTimelineDrawer(event)">
+        <div class="bg-slate-900 border border-white/15 rounded-3xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-5 md:p-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-slate-950/60">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
+                        <i class="fa-solid fa-route"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base md:text-lg font-bold text-white">Interactive Journey Timeline Explorer</h3>
+                        <p class="text-xs text-slate-400">Filter by folder and click any milestone card to open that exact spread</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+                    <button onclick="populateTimelineList('all')" id="tl-tab-all" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-400 text-slate-950">All</button>
+                    <button onclick="populateTimelineList('love')" id="tl-tab-love" class="px-3 py-1 rounded-lg text-xs font-semibold transition text-rose-200 hover:bg-white/10">♥ Love</button>
+                    <button onclick="populateTimelineList('marriage')" id="tl-tab-marriage" class="px-3 py-1 rounded-lg text-xs font-semibold transition text-amber-200 hover:bg-white/10">💍 Marriage</button>
+                    <button onclick="populateTimelineList('nivisha')" id="tl-tab-nivisha" class="px-3 py-1 rounded-lg text-xs font-semibold transition text-sky-200 hover:bg-white/10">★ Nivisha</button>
+                </div>
+
+                <button onclick="closeTimelineDrawer()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="timeline-cards-container" class="p-6 md:p-8 overflow-y-auto space-y-4 flex-1"></div>
+        </div>
+    </div>
+
+    <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl hidden items-center justify-center p-4 md:p-10" onclick="closeLightboxModal(event)">
+        <div class="relative max-w-4xl w-full bg-slate-900 border border-white/15 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row" onclick="event.stopPropagation()">
+            <button onclick="closeLightboxModal()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="md:w-3/5 bg-black flex items-center justify-center p-4 md:p-6 min-h-[280px] max-h-[75vh]">
+                <img id="lb-image" src="" alt="Memory" class="max-h-[65vh] w-auto object-contain rounded-lg shadow-2xl">
+            </div>
+
+            <div class="md:w-2/5 p-6 md:p-8 flex flex-col justify-between bg-slate-950 text-slate-100">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span id="lb-folder-badge" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/30">Folder</span>
+                        <span id="lb-date" class="text-xs text-slate-400 font-medium"></span>
+                    </div>
+                    <h2 id="lb-title" class="text-2xl font-serif-book font-bold text-white mb-1"></h2>
+                    <p id="lb-location" class="text-xs text-amber-300 mb-4 flex items-center gap-1.5"></p>
+                    <div class="h-px w-full bg-white/10 mb-4"></div>
+                    <p id="lb-story" class="text-sm text-slate-300 leading-relaxed font-serif-book italic mb-5"></p>
+                </div>
+
+                <div class="space-y-2.5 pt-4 border-t border-white/10">
+                    <button id="lb-replace-photo-btn" class="w-full py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-amber-300 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-camera-rotate"></i>
+                        <span>Upload & Replace This Photo</span>
+                    </button>
+                    <button onclick="closeLightboxModal()" class="w-full py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-xs font-bold text-slate-950 transition">
+                        Back to Album Spread
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Memory Modal -->
+    <div id="add-memory-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl hidden items-center justify-center p-4" onclick="closeAddModal(event)">
+        <div class="bg-slate-900 border border-white/15 rounded-3xl max-w-lg w-full p-6 md:p-7 shadow-2xl text-slate-100" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
+                        <i class="fa-solid fa-camera-retro"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Add New Memory Page</h3>
+                        <p class="text-xs text-slate-400">Bind your own photo & story into Love Story, Marriage, or Nivisha Baby</p>
+                    </div>
+                </div>
+                <button onclick="closeAddModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="add-memory-form" onsubmit="submitNewMemoryPage(event)" class="space-y-3.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Choose Folder *</label>
+                        <select id="new-folder" class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-amber-400">
+                            <option value="love">♥ 1. Love Story Folder</option>
+                            <option value="marriage">💍 2. Marriage Folder</option>
+                            <option value="nivisha">★ 3. Nivisha Baby Folder</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Scrapbook Frame Style *</label>
+                        <select id="new-layout" class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-amber-400">
+                            <option value="polaroid">Polaroid Frame & Washi Tape</option>
+                            <option value="postcard">Postcard Stamp Keepsake</option>
+                            <option value="editorial">Editorial Showcase</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Memory Title *</label>
+                        <input id="new-title" type="text" required placeholder="e.g. Nivisha's First Steps" class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Date / Milestone *</label>
+                        <input id="new-date" type="text" required placeholder="e.g. October 2026" class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Location *</label>
+                    <input id="new-location" type="text" required placeholder="e.g. Chennai, India" class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-amber-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Upload Photo or Paste Image URL</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <label class="flex-1 cursor-pointer px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-dashed border-white/25 text-xs text-slate-200 flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-upload text-amber-400"></i>
+                            <span id="new-file-label">Choose Photo File...</span>
+                            <input id="new-file-input" type="file" accept="image/*" class="hidden" onchange="handleNewMemoryUpload(event)">
+                        </label>
+                        <input id="new-url-input" type="url" placeholder="Or https://..." class="flex-1 px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Memory Story *</label>
+                    <textarea id="new-story" rows="3" required placeholder="Write the story behind this memory..." class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-amber-400"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-medium text-slate-300">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-xs font-bold text-slate-950 shadow-lg">
+                        Bind Into Folder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-box" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 border border-amber-400/50 text-amber-200 px-4 py-2 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2 opacity-0 pointer-events-none -translate-y-2 transition-all duration-300">
+        <i class="fa-solid fa-sparkles text-amber-400"></i>
+        <span id="toast-msg">Ready</span>
+    </div>
+
+    <script>
+        const FALLBACK_PHOTO = "https://placehold.co/800x600/2a1f1a/f3d899?text=Family+Memory";
+
+        const FOLDER_CONFIG = {
+            all: {
+                id: 'all',
+                name: 'Complete Family Anthology',
+                shortName: 'All Folders',
+                subtitle: 'Love Story • Sacred Marriage • Nivisha Baby',
+                theme: 'default',
+                icon: 'fa-folder-open',
+                badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+            },
+            love: {
+                id: 'love',
+                name: 'Folder 01 • Our Love Story',
+                shortName: 'Love Story',
+                subtitle: '2021 – 2023 • Two Hearts, One Journey',
+                theme: 'love',
+                icon: 'fa-heart',
+                badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-400/40'
+            },
+            marriage: {
+                id: 'marriage',
+                name: 'Folder 02 • Sacred Marriage',
+                shortName: 'Marriage',
+                subtitle: '2024 • Haldi, Muhurtham Vows & Forever',
+                theme: 'marriage',
+                icon: 'fa-ring',
+                badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+            },
+            nivisha: {
+                id: 'nivisha',
+                name: 'Folder 03 • Nivisha Baby',
+                shortName: 'Nivisha Baby',
+                subtitle: '2025 – 2026 • Our Little Miracle Princess',
+                theme: 'nivisha',
+                icon: 'fa-baby',
+                badgeClass: 'bg-sky-500/20 text-sky-300 border-sky-400/40'
+            }
+        };
+
+        // 18 Curated Pages (6 Pages = 3 Full Spreads per Folder so Left & Right pages are always paired cleanly!)
+        const albumPages = [
+            // ================= FOLDER 1: LOVE STORY (6 Pages = 3 Spreads) =================
+            {
+                id: 'love-cover',
+                folder: 'love',
+                type: 'chapter-intro',
+                chapterTag: 'Folder 01 • 2021 – 2023',
+                title: 'Our Love Story',
+                subtitle: 'Where Forever Began',
+                date: 'Chapter I',
+                location: 'Chennai & Coastal Drives',
+                icon: 'fa-heart',
+                milestones: [
+                    'Feb 14, 2021 — Rainy Window & First Coffee',
+                    'Nov 19, 2022 — Golden Hour By The Sea',
+                    'Feb 18, 2023 — Paper Lantern Wishes',
+                    'Aug 05, 2023 — Hilltop Sunset Proposal',
+                    'Nov 12, 2023 — Engagement Ring Promise'
+                ],
+                story: 'Every unforgettable love story begins with a simple hello. Through rainy café evenings, endless coastal drives, and whispered wishes, we found our forever home in each other.',
+                signature: 'Two Hearts, One Soul ♥',
+                stickers: []
+            },
+            {
+                id: 'love-1',
+                folder: 'love',
+                type: 'polaroid',
+                title: 'First Coffee & Rainy Window',
+                location: 'Garden Courtyard Café',
+                date: 'February 14, 2021',
+                image: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=900&q=80',
+                rotation: '-1.6deg',
+                note: 'Where it all began ♥',
+                grade: 'grade-normal',
+                likes: 24,
+                story: 'Two warm cappuccinos turned into four hours of non-stop laughter while the evening rain tapped gently against the windowpane.',
+                stickers: [{ emoji: '❤️', top: '12%', left: '82%' }]
+            },
+            {
+                id: 'love-2',
+                folder: 'love',
+                type: 'postcard',
+                title: 'Golden Hour By The Sea',
+                location: 'East Coast Promenade',
+                date: 'November 19, 2022',
+                image: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=900&q=80',
+                stampCode: 'LOVE • 2022',
+                grade: 'grade-warm',
+                likes: 31,
+                story: 'Walking barefoot along the shore as the sky turned rose-gold, talking about all the dreams we wanted to build together.',
+                stickers: []
+            },
+            {
+                id: 'love-3',
+                folder: 'love',
+                type: 'polaroid',
+                title: 'Starlight & Paper Lanterns',
+                location: 'Lakeside Night Festival',
+                date: 'February 18, 2023',
+                image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=900&q=80',
+                rotation: '1.5deg',
+                note: 'Wishes in the stars ✨',
+                grade: 'grade-normal',
+                likes: 29,
+                story: 'We wrote our secret wishes on a glowing lantern and watched it drift up toward the constellations hand in hand.',
+                stickers: [{ emoji: '✨', top: '14%', left: '12%' }]
+            },
+            {
+                id: 'love-4',
+                folder: 'love',
+                type: 'editorial',
+                title: 'She Said Yes Under Fairy Lights!',
+                location: 'Hilltop Sunset Overlook',
+                date: 'August 05, 2023',
+                image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=900&q=80',
+                grade: 'grade-normal',
+                likes: 54,
+                story: 'Under a canopy of warm twinkling fairy lights, one heartfelt question turned our love story into a lifetime promise.',
+                stickers: [{ emoji: '💍', top: '10%', left: '84%' }]
+            },
+            {
+                id: 'love-5',
+                folder: 'love',
+                type: 'polaroid',
+                title: 'Counting Down To Forever',
+                location: 'Heritage Botanical Gardens',
+                date: 'November 12, 2023',
+                image: 'https://images.unsplash.com/photo-1529634806980-85c3dd6d34ac?auto=format&fit=crop&w=900&q=80',
+                rotation: '-1.2deg',
+                note: 'Engaged & Overjoyed 🥂',
+                grade: 'grade-dreamy',
+                likes: 42,
+                story: 'Celebrating our engagement with family blessings, joyful portraits, and excitement for our upcoming wedding bells.',
+                stickers: []
+            },
+
+            // ================= FOLDER 2: MARRIAGE (6 Pages = 3 Spreads) =================
+            {
+                id: 'marriage-cover',
+                folder: 'marriage',
+                type: 'chapter-intro',
+                chapterTag: 'Folder 02 • 2024',
+                title: 'Sacred Marriage',
+                subtitle: 'Tying the Eternal Knot',
+                date: 'Chapter II',
+                location: 'Royal Mandapam & Hills',
+                icon: 'fa-ring',
+                milestones: [
+                    'Jan 19, 2024 — Henna & Sangeet Melodies',
+                    'Jan 20, 2024 — Golden Haldi & Marigolds',
+                    'Jan 21, 2024 — Auspicious Muhurtham Vows',
+                    'Jan 22, 2024 — Starlight Reception Dance',
+                    'Feb 02, 2024 — Misty Tea Hills Honeymoon'
+                ],
+                story: 'Surrounded by the blessings of elders, fragrant jasmine garlands, and joyous music, two families united as we stepped into marriage.',
+                signature: 'Bound by Sacred Vows 💍',
+                stickers: []
+            },
+            {
+                id: 'marriage-1',
+                folder: 'marriage',
+                type: 'polaroid',
+                title: 'Golden Haldi & Marigold Shower',
+                location: 'Courtyard Pavilion',
+                date: 'January 20, 2024',
+                image: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=900&q=80',
+                rotation: '-1.5deg',
+                note: 'Turmeric & Marigolds 🌼',
+                grade: 'grade-warm',
+                likes: 47,
+                story: 'A sunlit morning filled with clouds of yellow marigold petals, traditional folk songs, and elders blessing us with golden turmeric.',
+                stickers: [{ emoji: '🌼', top: '12%', left: '80%' }]
+            },
+            {
+                id: 'marriage-2',
+                folder: 'marriage',
+                type: 'editorial',
+                title: 'Sacred Muhurtham & Garland Vows',
+                location: 'Grand Temple Mandapam',
+                date: 'January 21, 2024',
+                image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80',
+                grade: 'grade-normal',
+                likes: 78,
+                story: 'As the auspicious Nadaswaram echoed and flower petals rained down, we exchanged garlands with happy tears and radiant smiles.',
+                stickers: [{ emoji: '❤️', top: '12%', left: '85%' }]
+            },
+            {
+                id: 'marriage-3',
+                folder: 'marriage',
+                type: 'polaroid',
+                title: 'Mehendi & Sangeet Laughter',
+                location: 'Royal Banquets',
+                date: 'January 19, 2024',
+                image: 'https://images.unsplash.com/photo-1545232972-904664f12661?auto=format&fit=crop&w=900&q=80',
+                rotation: '1.4deg',
+                note: 'Henna & Music Night 🎶',
+                grade: 'grade-normal',
+                likes: 39,
+                story: 'Intricate henna patterns on hands, cousins cheering on the dance floor, and melodies that lasted past midnight.',
+                stickers: []
+            },
+            {
+                id: 'marriage-4',
+                folder: 'marriage',
+                type: 'polaroid',
+                title: 'Starlight Reception & First Dance',
+                location: 'Palace Lawn Gardens',
+                date: 'January 22, 2024',
+                image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=900&q=80',
+                rotation: '-1.3deg',
+                note: 'Sparklers & Joy ✨',
+                grade: 'grade-dreamy',
+                likes: 52,
+                story: 'Golden sparklers lit up the night pathway as we shared our first reception dance surrounded by cheers from everyone we love.',
+                stickers: [{ emoji: '✨', top: '15%', left: '10%' }]
+            },
+            {
+                id: 'marriage-5',
+                folder: 'marriage',
+                type: 'postcard',
+                title: 'Misty Morning in the Tea Hills',
+                location: 'Emerald Valley Retreat',
+                date: 'February 02, 2024',
+                image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80',
+                stampCode: 'WED • 2024',
+                grade: 'grade-normal',
+                likes: 44,
+                story: 'Waking up to cool mountain mist drifting over lush green hills—celebrating the serene beginning of our married life.',
+                stickers: []
+            },
+
+            // ================= FOLDER 3: NIVISHA BABY (6 Pages = 3 Spreads) =================
+            {
+                id: 'nivisha-cover',
+                folder: 'nivisha',
+                type: 'chapter-intro',
+                chapterTag: 'Folder 03 • 2025 – 2026',
+                title: 'Nivisha Baby',
+                subtitle: 'Our Little Bundle of Miracle',
+                date: 'Chapter III',
+                location: 'Welcome Princess Nivisha',
+                icon: 'fa-baby',
+                milestones: [
+                    'May 12, 2025 — Hello World! Nivisha Arrives',
+                    'Jun 15, 2025 — Flower Cradle & Naming Day',
+                    'Sep 18, 2025 — Sunny Morning Giggles',
+                    'Jan 10, 2026 — First Tiny Steps at Home',
+                    'May 12, 2026 — Nivisha Turns One! 🎂'
+                ],
+                story: 'The day little Nivisha arrived, our world became brighter and our hearts grew ten times bigger. Every tiny yawn, sweet giggle, and wobbly step is pure magic.',
+                signature: 'Our Sweet Princess Nivisha ★',
+                stickers: []
+            },
+            {
+                id: 'nivisha-1',
+                folder: 'nivisha',
+                type: 'polaroid',
+                title: 'Hello World! Ten Tiny Fingers',
+                location: 'Nivisha’s Arrival Day',
+                date: 'May 12, 2025',
+                image: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=900&q=80',
+                rotation: '-1.5deg',
+                note: 'Welcome Baby Nivisha 🍼',
+                grade: 'grade-dreamy',
+                likes: 96,
+                story: 'Holding baby Nivisha for the very first time—her tiny hand wrapped around our finger and melted our hearts forever.',
+                stickers: [{ emoji: '🍼', top: '12%', left: '82%' }]
+            },
+            {
+                id: 'nivisha-2',
+                folder: 'nivisha',
+                type: 'postcard',
+                title: 'Flower Cradle & Naming Ceremony',
+                location: 'Family Home, Chennai',
+                date: 'June 15, 2025',
+                image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=900&q=80',
+                stampCode: 'NIVISHA • 25',
+                grade: 'grade-normal',
+                likes: 68,
+                story: 'In a traditional cradle decked with fresh roses and jasmine, we whispered “Nivisha” into her ears amidst grandparents’ blessings.',
+                stickers: [{ emoji: '👑', top: '14%', left: '12%' }]
+            },
+            {
+                id: 'nivisha-3',
+                folder: 'nivisha',
+                type: 'polaroid',
+                title: 'Sunny Morning Giggles & Bunny',
+                location: 'Nivisha’s Nursery',
+                date: 'September 18, 2025',
+                image: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=900&q=80',
+                rotation: '1.6deg',
+                note: 'Sweetest smile ever 😊',
+                grade: 'grade-normal',
+                likes: 74,
+                story: 'Her contagious morning laugh lights up the entire house! Watching Nivisha clap her hands and reach for her favorite plush bunny.',
+                stickers: []
+            },
+            {
+                id: 'nivisha-4',
+                folder: 'nivisha',
+                type: 'polaroid',
+                title: 'Curious Eyes & First Steps',
+                location: 'Living Room Rug',
+                date: 'January 10, 2026',
+                image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=900&q=80',
+                rotation: '-1.4deg',
+                note: 'Look who is walking! 👣',
+                grade: 'grade-warm',
+                likes: 83,
+                story: 'Holding onto dad’s hands and taking her very first wobbly steps across the room while everyone cheered and clapped!',
+                stickers: [{ emoji: '🦋', top: '12%', left: '80%' }]
+            },
+            {
+                id: 'nivisha-5',
+                folder: 'nivisha',
+                type: 'editorial',
+                title: 'Nivisha Turns One! Crown & Cake',
+                location: 'First Birthday Wonderland',
+                date: 'May 12, 2026',
+                image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=900&q=80',
+                grade: 'grade-normal',
+                likes: 112,
+                story: 'One whole year of pure joy with our darling Nivisha! Pastel balloons, buttercream frosting on her nose, and endless applause.',
+                stickers: [{ emoji: '🎂', top: '10%', left: '84%' }]
+            }
+        ];
+
+        /* =========================================================================
+         * STATE & WEB AUDIO SYNTHESIZER
+         * ========================================================================= */
+        let currentFolder = 'all';
+        let filteredPages = [];
+        let currentSpreadIdx = 0; // Each spread shows 2 pages: left = 2*currentSpreadIdx, right = 2*currentSpreadIdx + 1
+        let isTurning = false;
+        let pendingPhotoPageId = null;
+        let uploadedNewPhotoDataUrl = null;
+        let musicInterval = null;
+        let autoPlayInterval = null;
+        let audioCtx = null;
+
+        function getAudioCtx() {
+            if (!audioCtx) {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (Ctx) audioCtx = new Ctx();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+
+        function playPageFlipAudio() {
+            try {
+                const ctx = getAudioCtx();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const dur = 0.22;
+                const len = Math.floor(ctx.sampleRate * dur);
+                const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < len; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
+                }
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(800, now);
+                filter.frequency.exponentialRampToValueAtTime(1800, now + dur);
+                filter.Q.value = 2.8;
+
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.14, now + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+                src.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+                src.start(now);
+                src.stop(now + dur);
+            } catch (e) {}
+        }
+
+        function playBellNote(freq = 659.25) {
+            try {
+                const ctx = getAudioCtx();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(0.07, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 1.05);
+            } catch (e) {}
+        }
+
+        function toggleMusicBox() {
+            const btn = document.getElementById('music-btn');
+            if (musicInterval) {
+                clearInterval(musicInterval);
+                musicInterval = null;
+                btn.classList.remove('bg-amber-400', 'text-slate-950');
+                showToast('Music Box Lullaby Paused');
+            } else {
+                const melody = [523.25, 659.25, 783.99, 1046.5, 880.0, 783.99, 659.25, 587.33];
+                let step = 0;
+                playBellNote(melody[0]);
+                musicInterval = setInterval(() => {
+                    step = (step + 1) % melody.length;
+                    playBellNote(melody[step]);
+                }, 620);
+                btn.classList.add('bg-amber-400', 'text-slate-950');
+                showToast('Playing Gentle Music Box Lullaby ♪');
+            }
+        }
+
+        /* =========================================================================
+         * PAGE HTML BUILDER (WITH LIVE EDITING, PHOTO FILTERS & STICKERS)
+         * ========================================================================= */
+        function renderFolderBadgeOnPage(folderKey) {
+            if (folderKey === 'love') {
+                return `<button onclick="selectFolder('love')" class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-rose-500/15 text-rose-700 border border-rose-400/30 hover:bg-rose-500/25 transition"><i class="fa-solid fa-heart mr-1 text-[8px]"></i>Love</button>`;
+            }
+            if (folderKey === 'marriage') {
+                return `<button onclick="selectFolder('marriage')" class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-800 border border-amber-400/30 hover:bg-amber-500/25 transition"><i class="fa-solid fa-ring mr-1 text-[8px]"></i>Marriage</button>`;
+            }
+            if (folderKey === 'nivisha') {
+                return `<button onclick="selectFolder('nivisha')" class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-800 border border-sky-400/30 hover:bg-sky-500/25 transition"><i class="fa-solid fa-baby mr-1 text-[8px]"></i>Nivisha</button>`;
+            }
+            return '';
+        }
+
+        function renderStickersOverlay(page) {
+            if (!page.stickers || !page.stickers.length) return '';
+            return page.stickers.map((st, idx) => `
+                <div onclick="removeStickerFromPage(event, '${page.id}', ${idx})"
+                     class="page-sticker"
+                     style="top: ${st.top}; left: ${st.left};"
+                     title="Click to remove sticker">
+                    ${st.emoji}
+                </div>
+            `).join('');
+        }
+
+        function renderBottomActionToolbar(page, pageNumber) {
+            return `
+                <div class="flex items-center justify-between text-[10px] pt-1.5 border-t border-current/10" style="color: var(--page-muted)">
+                    <div class="flex items-center gap-1">
+                        <button onclick="likePage(event, '${page.id}')" class="px-2 py-0.5 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 font-bold flex items-center gap-1 transition" title="Send Love">
+                            <i class="fa-solid fa-heart text-rose-600 text-[9px]"></i>
+                            <span id="likes-${page.id}">${page.likes || 18}</span>
+                        </button>
+                        <button onclick="cyclePhotoFilter(event, '${page.id}')" class="px-2 py-0.5 rounded-full bg-black/5 hover:bg-black/15 font-semibold flex items-center gap-1 transition" title="Cycle Photo Color Filter (Normal / Warm / Vintage / B&W)">
+                            <i class="fa-solid fa-wand-sparkles text-[9px]" style="color: var(--page-accent)"></i>
+                            <span class="hidden sm:inline">Filter</span>
+                        </button>
+                        <button onclick="triggerReplacePhoto(event, '${page.id}')" class="px-2 py-0.5 rounded-full bg-black/5 hover:bg-black/15 font-semibold flex items-center gap-1 transition" title="Replace with your own photo">
+                            <i class="fa-solid fa-camera text-[9px]"></i>
+                            <span class="hidden md:inline">Photo</span>
+                        </button>
+                    </div>
+                    <span class="font-bold opacity-75">Pg ${pageNumber}</span>
+                </div>
+            `;
+        }
+
+        function buildPageFaceHTML(page, pageNumber, side) {
+            const cornerCurlHTML = side === 'right'
+                ? `<div onclick="nextSpread()" class="corner-curl-btn corner-curl-right" title="Next Spread"><i class="fa-solid fa-chevron-right text-[10px] opacity-60"></i></div>`
+                : `<div onclick="prevSpread()" class="corner-curl-btn corner-curl-left" title="Previous Spread"><i class="fa-solid fa-chevron-left text-[10px] opacity-60"></i></div>`;
+
+            if (!page) {
+                return `
+                    <div class="w-full h-full p-5 md:p-8 flex flex-col justify-between items-center text-center relative">
+                        <div class="text-[10px] uppercase tracking-widest opacity-50">Family Scrapbook Archive</div>
+                        <div class="my-auto max-w-[240px]">
+                            <div class="w-12 h-12 rounded-full border border-current/25 flex items-center justify-center mx-auto mb-3" style="color: var(--page-accent)">
+                                <i class="fa-solid fa-plus"></i>
+                            </div>
+                            <h3 class="font-serif-book text-xl font-bold mb-1">Add Your Next Memory</h3>
+                            <p class="font-serif-book italic text-xs opacity-75 mb-4">Bind a new photograph into Love Story, Marriage, or Nivisha Baby.</p>
+                            <button onclick="openAddModal()" class="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow transition">
+                                + Add Photo Page
+                            </button>
+                        </div>
+                        <div class="text-[10px] opacity-50">Pg ${pageNumber}</div>
+                        ${cornerCurlHTML}
+                    </div>
+                `;
+            }
+
+            // 1. CHAPTER INTRO PAGE
+            if (page.type === 'chapter-intro') {
+                const milestoneItems = (page.milestones || []).map((m, idx) => `
+                    <div onclick="openTimelineDrawer('${page.folder}')" class="cursor-pointer flex items-center gap-2 text-left text-[10px] md:text-[11px] py-1 px-2.5 rounded-lg bg-black/5 hover:bg-black/10 border border-current/10 transition">
+                        <span class="w-4 h-4 rounded-full bg-current/15 flex items-center justify-center text-[9px] font-bold shrink-0" style="color: var(--page-accent)">${idx + 1}</span>
+                        <span class="font-serif-book truncate font-medium">${m}</span>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="w-full h-full p-4 md:p-7 flex flex-col justify-between relative">
+                        ${renderStickersOverlay(page)}
+                        <div class="border-2 border-double border-current/25 rounded-2xl p-4 md:p-5 h-full flex flex-col justify-between text-center">
+                            <div class="flex items-center justify-between text-[9px] md:text-[10px] uppercase tracking-widest" style="color: var(--page-muted)">
+                                <span>${page.chapterTag}</span>
+                                ${renderFolderBadgeOnPage(page.folder)}
+                            </div>
+
+                            <div class="my-auto py-1">
+                                <div class="w-11 h-11 md:w-13 md:h-13 mx-auto mb-2 rounded-full flex items-center justify-center border border-current/30 shadow-sm" style="color: var(--page-accent)">
+                                    <i class="fa-solid ${page.icon} text-base md:text-xl"></i>
+                                </div>
+                                <h2 contenteditable="true" onblur="saveInlineText('${page.id}', 'title', this.innerText)" class="font-serif-book text-xl md:text-3xl font-bold leading-tight mb-0.5">${page.title}</h2>
+                                <p class="text-[10px] uppercase tracking-widest font-bold mb-2" style="color: var(--page-accent)">${page.subtitle}</p>
+                                <p contenteditable="true" onblur="saveInlineText('${page.id}', 'story', this.innerText)" class="font-serif-book italic text-xs leading-relaxed px-1 mb-3" style="color: var(--page-muted)">${page.story}</p>
+                                <div class="space-y-1 max-w-[275px] mx-auto">${milestoneItems}</div>
+                            </div>
+
+                            <div class="pt-2 border-t border-current/10 flex items-center justify-between text-[10px]">
+                                <span class="font-hand text-sm md:text-base font-bold" style="color: var(--page-accent)">${page.signature}</span>
+                                <button onclick="openTimelineDrawer('${page.folder}')" class="px-2.5 py-1 rounded-lg bg-black/5 hover:bg-black/15 font-bold transition" style="color: var(--page-accent)">
+                                    <i class="fa-solid fa-route mr-1"></i>Explore Timeline
+                                </button>
+                            </div>
+                        </div>
+                        ${cornerCurlHTML}
+                    </div>
+                `;
+            }
+
+            // 2. EDITORIAL LAYOUT
+            if (page.type === 'editorial') {
+                return `
+                    <div class="w-full h-full p-4 md:p-7 flex flex-col justify-between relative">
+                        ${renderStickersOverlay(page)}
+                        <div>
+                            <div class="flex items-center justify-between gap-1 mb-1">
+                                <span class="text-[9px] md:text-[10px] uppercase tracking-widest font-bold truncate" style="color: var(--page-accent)">
+                                    <i class="fa-solid fa-location-dot mr-1"></i>${page.location}
+                                </span>
+                                ${renderFolderBadgeOnPage(page.folder)}
+                            </div>
+                            <h3 contenteditable="true" onblur="saveInlineText('${page.id}', 'title', this.innerText)" class="font-serif-book text-base md:text-xl font-bold leading-snug">${page.title}</h3>
+                        </div>
+
+                        <div class="polaroid-card p-2 my-auto cursor-zoom-in" onclick="openLightbox('${page.id}')">
+                            <div class="relative overflow-hidden rounded aspect-[16/10] bg-stone-200">
+                                <img id="img-${page.id}" src="${page.image}" alt="${page.title}" onerror="this.src='${FALLBACK_PHOTO}'" class="w-full h-full object-cover transition duration-300 ${page.grade || 'grade-normal'}">
+                                <div class="absolute bottom-2 right-2 bg-black/65 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <i class="fa-solid fa-magnifying-glass-plus"></i> Inspect
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p contenteditable="true" onblur="saveInlineText('${page.id}', 'story', this.innerText)" class="font-serif-book italic text-xs md:text-sm leading-relaxed line-clamp-2 mb-1" style="color: var(--page-text)">${page.story}</p>
+                            <div class="text-[10px] font-semibold mb-1" style="color: var(--page-muted)"><i class="fa-regular fa-calendar mr-1"></i>${page.date}</div>
+                            ${renderBottomActionToolbar(page, pageNumber)}
+                        </div>
+                        ${cornerCurlHTML}
+                    </div>
+                `;
+            }
+
+            // 3. POSTCARD KEEP-SAKE LAYOUT
+            if (page.type === 'postcard') {
+                return `
+                    <div class="w-full h-full p-4 md:p-7 flex flex-col justify-between relative">
+                        ${renderStickersOverlay(page)}
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <span class="text-[9px] md:text-[10px] uppercase tracking-wider font-semibold block" style="color: var(--page-muted)">${page.date}</span>
+                                <h3 contenteditable="true" onblur="saveInlineText('${page.id}', 'title', this.innerText)" class="font-serif-book text-base md:text-xl font-bold leading-tight truncate">${page.title}</h3>
+                            </div>
+                            <div class="border-2 border-dashed border-current/40 px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider shrink-0" style="color: var(--page-accent)">
+                                ${page.stampCode || 'STAMP'}
+                            </div>
+                        </div>
+
+                        <div class="polaroid-card p-2 my-auto cursor-zoom-in" style="transform: rotate(1deg)" onclick="openLightbox('${page.id}')">
+                            <div class="washi-tape"></div>
+                            <div class="relative overflow-hidden rounded-sm aspect-[16/10] bg-stone-200">
+                                <img id="img-${page.id}" src="${page.image}" alt="${page.title}" onerror="this.src='${FALLBACK_PHOTO}'" class="w-full h-full object-cover transition duration-300 ${page.grade || 'grade-normal'}">
+                            </div>
+                            <div class="pt-1.5 flex items-center justify-between text-stone-700 px-1">
+                                <span class="font-hand text-sm md:text-base font-bold">${page.location}</span>
+                                <span class="text-[9px] text-stone-400 uppercase">Click to Zoom</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p contenteditable="true" onblur="saveInlineText('${page.id}', 'story', this.innerText)" class="font-serif-book text-xs md:text-sm leading-relaxed line-clamp-2 mb-1.5">${page.story}</p>
+                            ${renderBottomActionToolbar(page, pageNumber)}
+                        </div>
+                        ${cornerCurlHTML}
+                    </div>
+                `;
+            }
+
+            // 4. DEFAULT: POLAROID FRAME LAYOUT
+            return `
+                <div class="w-full h-full p-4 md:p-7 flex flex-col justify-between relative">
+                    ${renderStickersOverlay(page)}
+                    <div class="flex items-center justify-between text-[9px] md:text-[10px] uppercase tracking-wider border-b border-current/10 pb-1.5" style="color: var(--page-muted)">
+                        <span class="truncate max-w-[65%] font-semibold"><i class="fa-solid fa-location-dot mr-1" style="color: var(--page-accent)"></i>${page.location}</span>
+                        ${renderFolderBadgeOnPage(page.folder)}
+                    </div>
+
+                    <div class="my-auto py-1 flex flex-col items-center">
+                        <div class="polaroid-card w-[92%] max-w-[300px] cursor-zoom-in" style="transform: rotate(${page.rotation || '-1.4deg'})" onclick="openLightbox('${page.id}')">
+                            <div class="washi-tape"></div>
+                            <div class="relative overflow-hidden rounded-sm aspect-[4/3] bg-stone-200">
+                                <img id="img-${page.id}" src="${page.image}" alt="${page.title}" onerror="this.src='${FALLBACK_PHOTO}'" class="w-full h-full object-cover transition duration-300 ${page.grade || 'grade-normal'}">
+                                <div class="absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <i class="fa-solid fa-expand text-[8px]"></i> Zoom
+                                </div>
+                            </div>
+                            <div class="pt-2 flex items-center justify-between px-1 gap-2">
+                                <span contenteditable="true" onclick="event.stopPropagation()" onblur="saveInlineText('${page.id}', 'title', this.innerText)" class="font-hand text-sm md:text-base font-bold text-stone-800 truncate">${page.title}</span>
+                                <span class="font-hand text-xs text-amber-800 shrink-0">${page.note || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p contenteditable="true" onblur="saveInlineText('${page.id}', 'story', this.innerText)" class="font-serif-book text-xs md:text-sm leading-relaxed line-clamp-2 mb-1" style="color: var(--page-text)">${page.story}</p>
+                        <div class="text-[10px] italic font-serif-book mb-1" style="color: var(--page-muted)">${page.date}</div>
+                        ${renderBottomActionToolbar(page, pageNumber)}
+                    </div>
+                    ${cornerCurlHTML}
+                </div>
+            `;
+        }
+
+        /* =========================================================================
+         * TWO-LEAF 3D SPREAD ENGINE (ZERO CLIPPING / ZERO CLICK BUGS)
+         * ========================================================================= */
+        function rebuildFilteredPages() {
+            const raw = currentFolder === 'all'
+                ? [...albumPages]
+                : albumPages.filter(p => p.folder === currentFolder);
+            filteredPages = [...raw];
+            if (filteredPages.length % 2 !== 0) {
+                filteredPages.push(null);
+            }
+        }
+
+        function getTotalSpreads() {
+            return Math.max(1, Math.ceil(filteredPages.length / 2));
+        }
+
+        function renderCurrentSpreadStatic() {
+            const leftEl = document.getElementById('spread-left-page');
+            const rightEl = document.getElementById('spread-right-page');
+
+            const leftIdx = currentSpreadIdx * 2;
+            const rightIdx = currentSpreadIdx * 2 + 1;
+
+            leftEl.innerHTML = buildPageFaceHTML(filteredPages[leftIdx], leftIdx + 1, 'left');
+            rightEl.innerHTML = buildPageFaceHTML(filteredPages[rightIdx], rightIdx + 1, 'right');
+
+            updateHUDIndicators();
+        }
+
+        function updateHUDIndicators() {
+            const totalSpreads = getTotalSpreads();
+            const leftPage = filteredPages[currentSpreadIdx * 2];
+            const rightPage = filteredPages[currentSpreadIdx * 2 + 1];
+
+            document.getElementById('btn-prev-spread').disabled = (currentSpreadIdx <= 0);
+            document.getElementById('btn-next-spread').disabled = (currentSpreadIdx >= totalSpreads - 1);
+
+            const leftNum = currentSpreadIdx * 2 + 1;
+            const rightNum = currentSpreadIdx * 2 + 2;
+            const titleEl = document.getElementById('bottom-spread-title');
+            titleEl.textContent = `Pages ${leftNum}–${rightNum}: ${leftPage?.title || ''}${rightPage ? ' • ' + rightPage.title : ''}`;
+
+            // Highlight active timeline scrubber pill
+            document.querySelectorAll('.scrubber-pill').forEach(pill => {
+                const idx = parseInt(pill.dataset.spread, 10);
+                if (idx === currentSpreadIdx) {
+                    pill.className = 'scrubber-pill px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 bg-amber-400 text-slate-950 shadow scale-105';
+                } else {
+                    pill.className = 'scrubber-pill px-2.5 py-1 rounded-lg text-[10px] font-medium transition shrink-0 bg-white/10 hover:bg-white/20 text-slate-300';
+                }
+            });
+        }
+
+        function renderScrubberBar() {
+            const bar = document.getElementById('scrubber-pills-bar');
+            bar.innerHTML = '';
+            const totalSpreads = getTotalSpreads();
+
+            for (let s = 0; s < totalSpreads; s++) {
+                const leftPage = filteredPages[s * 2];
+                const rightPage = filteredPages[s * 2 + 1];
+                const btn = document.createElement('button');
+                btn.dataset.spread = s;
+                btn.className = 'scrubber-pill px-2.5 py-1 rounded-lg text-[10px] font-medium transition shrink-0 bg-white/10 text-slate-300';
+
+                let label = `Pages ${s * 2 + 1}–${s * 2 + 2}`;
+                if (leftPage?.type === 'chapter-intro') {
+                    label = `★ ${leftPage.title}`;
+                } else if (leftPage?.date) {
+                    label = leftPage.date.split(',')[0];
+                }
+                btn.textContent = label;
+                btn.title = `${leftPage?.title || ''} / ${rightPage?.title || ''}`;
+                btn.onclick = () => goToSpread(s);
+                bar.appendChild(btn);
+            }
+        }
+
+        function animateToSpread(targetSpreadIdx) {
+            const totalSpreads = getTotalSpreads();
+            if (isTurning || targetSpreadIdx < 0 || targetSpreadIdx >= totalSpreads || targetSpreadIdx === currentSpreadIdx) {
+                return;
+            }
+
+            isTurning = true;
+            playPageFlipAudio();
+
+            const leaf = document.getElementById('turning-leaf');
+            const leafFront = document.getElementById('leaf-front');
+            const leafBack = document.getElementById('leaf-back');
+            const leftStatic = document.getElementById('spread-left-page');
+            const rightStatic = document.getElementById('spread-right-page');
+
+            const goingForward = targetSpreadIdx > currentSpreadIdx;
+
+            if (goingForward) {
+                // Current right page flips left to become target's left page; underneath rightStatic immediately shows target's right page
+                const oldRightIdx = currentSpreadIdx * 2 + 1;
+                const newLeftIdx = targetSpreadIdx * 2;
+                const newRightIdx = targetSpreadIdx * 2 + 1;
+
+                leafFront.innerHTML = buildPageFaceHTML(filteredPages[oldRightIdx], oldRightIdx + 1, 'right');
+                leafBack.innerHTML = buildPageFaceHTML(filteredPages[newLeftIdx], newLeftIdx + 1, 'left');
+                rightStatic.innerHTML = buildPageFaceHTML(filteredPages[newRightIdx], newRightIdx + 1, 'right');
+
+                leaf.className = 'turning-leaf animating-next';
+            } else {
+                // Current left page flips right to become target's right page; underneath leftStatic immediately shows target's left page
+                const oldLeftIdx = currentSpreadIdx * 2;
+                const newRightIdx = targetSpreadIdx * 2 + 1;
+                const newLeftIdx = targetSpreadIdx * 2;
+
+                leafFront.innerHTML = buildPageFaceHTML(filteredPages[oldLeftIdx], oldLeftIdx + 1, 'left');
+                leafBack.innerHTML = buildPageFaceHTML(filteredPages[newRightIdx], newRightIdx + 1, 'right');
+                leftStatic.innerHTML = buildPageFaceHTML(filteredPages[newLeftIdx], newLeftIdx + 1, 'left');
+
+                leaf.className = 'turning-leaf animating-prev';
+            }
+
+            currentSpreadIdx = targetSpreadIdx;
+            updateHUDIndicators();
+
+            setTimeout(() => {
+                leaf.className = 'turning-leaf';
+                renderCurrentSpreadStatic();
+                isTurning = false;
+            }, 680);
+        }
+
+        function nextSpread() {
+            const totalSpreads = getTotalSpreads();
+            if (currentSpreadIdx < totalSpreads - 1) {
+                animateToSpread(currentSpreadIdx + 1);
+            } else if (autoPlayInterval) {
+                animateToSpread(0);
+            }
+        }
+
+        function prevSpread() {
+            if (currentSpreadIdx > 0) {
+                animateToSpread(currentSpreadIdx - 1);
+            }
+        }
+
+        function goToSpread(idx) {
+            if (idx === currentSpreadIdx) return;
+            animateToSpread(idx);
+        }
+
+        /* =========================================================================
+         * FOLDER SELECTION & THEME ENGINE
+         * ========================================================================= */
+        function selectFolder(folderKey) {
+            currentFolder = folderKey;
+            const cfg = FOLDER_CONFIG[folderKey] || FOLDER_CONFIG.all;
+
+            if (cfg.theme === 'default') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', cfg.theme);
+            }
+
+            // Update Top Pills & Physical Rail Tabs
+            ['all', 'love', 'marriage', 'nivisha'].forEach(k => {
+                const pill = document.getElementById(`folder-pill-${k}`);
+                if (pill) {
+                    if (k === folderKey) {
+                        pill.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-amber-400 text-slate-950 shadow scale-105';
+                    } else {
+                        pill.className = 'px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 text-slate-200 hover:bg-white/15 bg-white/5';
+                    }
+                }
+                const railTab = document.getElementById(`rail-tab-${k}`);
+                if (railTab) {
+                    railTab.classList.toggle('active-tab', k === folderKey);
+                }
+            });
+
+            document.getElementById('top-folder-title').textContent = cfg.name;
+            document.getElementById('top-folder-sub').textContent = cfg.subtitle;
+            document.getElementById('top-badge-icon').className = `fa-solid ${cfg.icon}`;
+            document.getElementById('scrubber-folder-label').textContent = cfg.shortName;
+
+            rebuildFilteredPages();
+            currentSpreadIdx = 0;
+            renderScrubberBar();
+            renderCurrentSpreadStatic();
+            playPageFlipAudio();
+            showToast(`Opened ${cfg.name}`);
+        }
+
+        /* =========================================================================
+         * ON-PAGE INTERACTIVITY: STICKERS, FILTERS, LIVE EDITING, HEARTS & UPLOAD
+         * ========================================================================= */
+        function saveInlineText(pageId, field, value) {
+            const page = albumPages.find(p => p.id === pageId);
+            if (page && value.trim()) {
+                page[field] = value.trim();
+                showToast('Saved your custom note on this page ✍️');
+            }
+        }
+
+        function likePage(event, pageId) {
+            event.stopPropagation();
+            const page = albumPages.find(p => p.id === pageId);
+            if (!page) return;
+            page.likes = (page.likes || 18) + 1;
+            const span = document.getElementById(`likes-${pageId}`);
+            if (span) span.textContent = page.likes;
+
+            playBellNote(880);
+
+            const heart = document.createElement('div');
+            heart.className = 'floating-heart text-rose-500 text-xl';
+            heart.style.left = `${event.clientX - 10}px`;
+            heart.style.top = `${event.clientY - 14}px`;
+            heart.innerHTML = '❤️';
+            document.body.appendChild(heart);
+            setTimeout(() => heart.remove(), 850);
+        }
+
+        function cyclePhotoFilter(event, pageId) {
+            event.stopPropagation();
+            const grades = ['grade-normal', 'grade-warm', 'grade-vintage', 'grade-bw', 'grade-dreamy'];
+            const labels = {
+                'grade-normal': 'Original True Color',
+                'grade-warm': 'Golden Warmth',
+                'grade-vintage': '1970s Vintage Film',
+                'grade-bw': 'Classic Monochrome B&W',
+                'grade-dreamy': 'Soft Pastel Glow'
+            };
+            const page = albumPages.find(p => p.id === pageId);
+            if (!page) return;
+            const nextIdx = (grades.indexOf(page.grade || 'grade-normal') + 1) % grades.length;
+            page.grade = grades[nextIdx];
+            renderCurrentSpreadStatic();
+            showToast(`Photo Filter: ${labels[page.grade]}`);
+        }
+
+        function toggleStickerDrawer() {
+            const bar = document.getElementById('sticker-palette');
+            bar.classList.toggle('hidden');
+            bar.classList.toggle('flex');
+        }
+
+        function stampStickerOnCurrentSpread(emoji) {
+            // Stamp onto the right page of the open spread (or left if right is empty)
+            const targetPage = filteredPages[currentSpreadIdx * 2 + 1] || filteredPages[currentSpreadIdx * 2];
+            if (!targetPage) return;
+            if (!targetPage.stickers) targetPage.stickers = [];
+
+            const randomTop = Math.floor(10 + Math.random() * 65) + '%';
+            const randomLeft = Math.floor(10 + Math.random() * 75) + '%';
+            targetPage.stickers.push({ emoji, top: randomTop, left: randomLeft });
+
+            playBellNote(987.77);
+            renderCurrentSpreadStatic();
+            showToast(`Stamped ${emoji} onto “${targetPage.title}” (Click sticker to remove)`);
+        }
+
+        function removeStickerFromPage(event, pageId, stickerIdx) {
+            event.stopPropagation();
+            const page = albumPages.find(p => p.id === pageId);
+            if (!page || !page.stickers) return;
+            page.stickers.splice(stickerIdx, 1);
+            renderCurrentSpreadStatic();
+            showToast('Sticker removed');
+        }
+
+        function triggerReplacePhoto(event, pageId) {
+            event.stopPropagation();
+            pendingPhotoPageId = pageId;
+            const input = document.getElementById('quick-photo-input');
+            input.value = '';
+            input.click();
+        }
+
+        function handleQuickPhotoFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file || !pendingPhotoPageId) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const page = albumPages.find(p => p.id === pendingPhotoPageId);
+                if (page) {
+                    page.image = e.target.result;
+                    rebuildFilteredPages();
+                    renderCurrentSpreadStatic();
+                    const lb = document.getElementById('lightbox-modal');
+                    if (!lb.classList.contains('hidden')) {
+                        document.getElementById('lb-image').src = page.image;
+                    }
+                    showToast(`Updated photo for “${page.title}” 📸`);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /* =========================================================================
+         * LIGHTBOX, TIMELINE & ADD MEMORY MODALS
+         * ========================================================================= */
+        function openLightbox(pageId) {
+            const page = albumPages.find(p => p.id === pageId);
+            if (!page) return;
+            const cfg = FOLDER_CONFIG[page.folder] || FOLDER_CONFIG.all;
+
+            document.getElementById('lb-image').src = page.image || FALLBACK_PHOTO;
+            document.getElementById('lb-title').textContent = page.title;
+            document.getElementById('lb-date').textContent = page.date;
+            document.getElementById('lb-location').innerHTML = `<i class="fa-solid fa-location-dot"></i> ${page.location}`;
+            document.getElementById('lb-story').textContent = `“${page.story}”`;
+            document.getElementById('lb-folder-badge').textContent = cfg.shortName;
+            document.getElementById('lb-replace-photo-btn').onclick = (e) => triggerReplacePhoto(e, page.id);
+
+            const modal = document.getElementById('lightbox-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeLightboxModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('lightbox-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openFolderShelfModal() {
+            const modal = document.getElementById('folder-shelf-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeFolderShelfModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('folder-shelf-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openTimelineDrawer(folderFilter) {
+            const modal = document.getElementById('timeline-modal');
+            populateTimelineList(folderFilter || currentFolder || 'all');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeTimelineDrawer(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('timeline-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function populateTimelineList(filterKey = 'all') {
+            ['all', 'love', 'marriage', 'nivisha'].forEach(k => {
+                const btn = document.getElementById(`tl-tab-${k}`);
+                if (!btn) return;
+                btn.className = (k === filterKey)
+                    ? 'px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-400 text-slate-950'
+                    : 'px-3 py-1 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-white/10';
+            });
+
+            const container = document.getElementById('timeline-cards-container');
+            const items = albumPages.filter(p => p.type !== 'chapter-intro' && (filterKey === 'all' || p.folder === filterKey));
+
+            container.innerHTML = `
+                <div class="relative border-l-2 border-amber-400/40 ml-3 md:ml-6 pl-5 space-y-4">
+                    ${items.map(page => {
+                        const cfg = FOLDER_CONFIG[page.folder];
+                        return `
+                            <div onclick="jumpToPageFromTimeline('${page.id}', '${page.folder}')" class="group cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-400/50 rounded-2xl p-3.5 transition flex flex-col sm:flex-row items-center gap-4 relative">
+                                <div class="w-3.5 h-3.5 rounded-full bg-amber-400 border-4 border-slate-900 absolute -left-[27px] top-6 group-hover:scale-125 transition"></div>
+                                <div class="w-full sm:w-32 h-20 rounded-xl overflow-hidden bg-slate-800 shrink-0">
+                                    <img src="${page.image}" alt="${page.title}" onerror="this.src='${FALLBACK_PHOTO}'" class="w-full h-full object-cover group-hover:scale-105 transition">
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${cfg.badgeClass}">${cfg.shortName}</span>
+                                        <span class="text-xs text-amber-300 font-semibold">${page.date}</span>
+                                        <span class="text-xs text-slate-400">• ${page.location}</span>
+                                    </div>
+                                    <h4 class="text-base font-serif-book font-bold text-white group-hover:text-amber-200">${page.title}</h4>
+                                    <p class="text-xs text-slate-300 line-clamp-2 mt-0.5">${page.story}</p>
+                                </div>
+                                <div class="shrink-0 px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1.5">
+                                    <span>Open Spread</span>
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function jumpToPageFromTimeline(pageId, folderKey) {
+            closeTimelineDrawer();
+            if (currentFolder !== 'all' && currentFolder !== folderKey) {
+                selectFolder(folderKey);
+            }
+            const pageIdx = filteredPages.findIndex(p => p && p.id === pageId);
+            if (pageIdx !== -1) {
+                const targetSpread = Math.floor(pageIdx / 2);
+                goToSpread(targetSpread);
+            }
+        }
+
+        function openAddModal() {
+            uploadedNewPhotoDataUrl = null;
+            document.getElementById('add-memory-form').reset();
+            if (currentFolder !== 'all') {
+                document.getElementById('new-folder').value = currentFolder;
+            }
+            document.getElementById('new-file-label').textContent = 'Choose Photo File...';
+            const modal = document.getElementById('add-memory-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeAddModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('add-memory-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleNewMemoryUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            document.getElementById('new-file-label').textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedNewPhotoDataUrl = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function submitNewMemoryPage(event) {
+            event.preventDefault();
+            const folder = document.getElementById('new-folder').value;
+            const type = document.getElementById('new-layout').value;
+            const title = document.getElementById('new-title').value.trim();
+            const date = document.getElementById('new-date').value.trim();
+            const location = document.getElementById('new-location').value.trim();
+            const url = document.getElementById('new-url-input').value.trim();
+            const story = document.getElementById('new-story').value.trim();
+
+            const image = uploadedNewPhotoDataUrl || url || 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=900&q=80';
+
+            const newPage = {
+                id: 'custom-' + Date.now(),
+                folder,
+                type,
+                title,
+                date,
+                location,
+                image,
+                rotation: Math.random() > 0.5 ? '1.4deg' : '-1.4deg',
+                note: folder === 'nivisha' ? 'Baby Nivisha ★' : (folder === 'marriage' ? 'Sacred Vows 💍' : 'Forever ♥'),
+                stampCode: folder.slice(0, 3).toUpperCase() + ' • 26',
+                grade: 'grade-normal',
+                likes: 1,
+                story,
+                stickers: []
+            };
+
+            albumPages.push(newPage);
+            closeAddModal();
+            selectFolder(folder);
+            const idx = filteredPages.findIndex(p => p && p.id === newPage.id);
+            if (idx !== -1) {
+                currentSpreadIdx = Math.floor(idx / 2);
+                renderCurrentSpreadStatic();
+            }
+            showToast(`Added “${title}” into ${FOLDER_CONFIG[folder].shortName}!`);
+        }
+
+        function toggleAutoPlay() {
+            const btn = document.getElementById('btn-autoplay');
+            const icon = document.getElementById('autoplay-icon');
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval);
+                autoPlayInterval = null;
+                icon.className = 'fa-solid fa-play text-xs';
+                btn.classList.remove('bg-amber-400', 'text-slate-950');
+                showToast('Auto-Flip Slideshow Paused');
+            } else {
+                nextSpread();
+                autoPlayInterval = setInterval(nextSpread, 3400);
+                icon.className = 'fa-solid fa-pause text-xs';
+                btn.classList.add('bg-amber-400', 'text-slate-950');
+                showToast('Auto-Flip Story Mode Playing...');
+            }
+        }
+
+        function showToast(msg) {
+            const box = document.getElementById('toast-box');
+            document.getElementById('toast-msg').textContent = msg;
+            box.classList.remove('opacity-0', '-translate-y-2');
+            clearTimeout(box._timer);
+            box._timer = setTimeout(() => {
+                box.classList.add('opacity-0', '-translate-y-2');
+            }, 2600);
+        }
+
+        /* =========================================================================
+         * SUBTLE 3D PARALLAX TILT & AMBIENT FLOATING PARTICLES
+         * ========================================================================= */
+        function initAmbientParticles() {
+            const canvas = document.getElementById('ambient-canvas');
+            const ctx = canvas.getContext('2d');
+            let w = canvas.width = window.innerWidth;
+            let h = canvas.height = window.innerHeight;
+
+            window.addEventListener('resize', () => {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            });
+
+            const particles = Array.from({ length: 28 }, () => ({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                r: 1.2 + Math.random() * 2.2,
+                vx: (Math.random() - 0.5) * 0.25,
+                vy: -0.15 - Math.random() * 0.3,
+                alpha: 0.15 + Math.random() * 0.45
+            }));
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.y < -10) p.y = h + 10;
+                    if (p.x < -10) p.x = w + 10;
+                    if (p.x > w + 10) p.x = -10;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = currentFolder === 'love'
+                        ? `rgba(251, 113, 133, ${p.alpha})`
+                        : currentFolder === 'nivisha'
+                            ? `rgba(125, 211, 252, ${p.alpha})`
+                            : `rgba(253, 224, 71, ${p.alpha})`;
+                    ctx.fill();
+                });
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // Keyboard & Touch Swipe Support
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                nextSpread();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSpread();
+            } else if (e.key === 'Escape') {
+                closeLightboxModal();
+                closeFolderShelfModal();
+                closeTimelineDrawer();
+                closeAddModal();
+            }
+        });
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            if (e.changedTouches.length === 1) {
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                const dy = e.changedTouches[0].clientY - touchStartY;
+                if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+                    if (dx < 0) nextSpread();
+                    else prevSpread();
+                }
+            }
+        }, { passive: true });
+
+        window.onload = () => {
+            rebuildFilteredPages();
+            renderScrubberBar();
+            renderCurrentSpreadStatic();
+            initAmbientParticles();
+        };
+    </script>
+</body>
+</html>
